@@ -25,11 +25,10 @@ jobs:
           curl -sLo gradle/wrapper/gradle-wrapper.jar \
             "https://github.com/gradle/gradle/raw/refs/tags/v8.4.0/gradle/wrapper/gradle-wrapper.jar"
 
-      - name: Fix and replace gradlew
+      - name: Fix gradlew
         run: |
           printf '#!/bin/sh\nexec java -classpath "gradle/wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain "$@"\n' > gradlew
           chmod +x gradlew
-          cat gradlew
 
       - name: Build with Gradle
         run: ./gradlew assembleDebug --no-daemon
