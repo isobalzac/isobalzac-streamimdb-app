@@ -25,13 +25,14 @@ jobs:
           curl -sLo gradle/wrapper/gradle-wrapper.jar \
             "https://github.com/gradle/gradle/raw/refs/tags/v8.4.0/gradle/wrapper/gradle-wrapper.jar"
 
-      - name: Grant execute permission
-        run: chmod +x gradlew
+      - name: Fix and replace gradlew
+        run: |
+          printf '#!/bin/sh\nexec java -classpath "gradle/wrapper/gradle-wrapper.jar" org.gradle.wrapper.GradleWrapperMain "$@"\n' > gradlew
+          chmod +x gradlew
+          cat gradlew
 
       - name: Build with Gradle
         run: ./gradlew assembleDebug --no-daemon
-        env:
-          GRADLE_OPTS: "-Dorg.gradle.jvmargs=-Xmx2g"
 
       - name: Upload APK
         uses: actions/upload-artifact@v4
