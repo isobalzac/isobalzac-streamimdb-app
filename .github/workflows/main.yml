@@ -1,1 +1,65 @@
+name: Build APK
 
+on:
+  push:
+    branches: [ main, master ]
+  workflow_dispatch:
+
+jobs:
+  build:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+
+      - uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+
+      - name: Setup Android SDK
+        uses: android-actions/setup-android@v3
+
+      - name: Grant execute permission
+        run: chmod +x gradlew
+
+      - name: Download Gradle Wrapper JAR
+        run: |
+          mkdir -p gradle/wrapper
+          curl -L "https://github.com/gradle/gradle/raw/v8.4.0/gradle/wrapper/gradle-wrapper.jar" \
+            -o gradle/wrapper/gradle-wrapper.jar 2>/dev/null || \
+          wget -q "https://services.gradle.org/distributions/gradle-8.4-bin.zip" -O /tmp/gradle.zip && \
+          cd /tmp && unzip -q gradle.zip && \
+          cp gradle-8.4/lib/plugins/gradle-wrapper-*.jar /home/runner/work/*/*/gradle/wrapper/gradle-wrapper.jar 2>/dev/null || true
+
+      - name: Alternative - Use Gradle Wrapper
+        run: |
+          cd gradle/wrapper
+          if [ ! -f gradle-wrapper.jar ]; then
+            curl -sL https://raw.githubusercontent.com/gradle/gradle/v8.4.0/gradle/wrapper/gradle-wrapper.jar \
+              -o gradle-wrapper.jar || \
+            python3 -c "
+          import urllib.request
+          url = 'https://services.gradle.org/distributions/gradle-8.4-bin.zip'
+          print('Downloading gradle...')
+          urllib.request.urlretrieve(url, '/tmp/gradle.zip')
+          import zipfile, shutil, os
+          with zipfile.ZipFile('/tmp/gradle.zip') as z:
+              z.extractall('/tmp/gradle-dist')
+          for root, dirs, files in os.walk('/tmp/gradle-dist'):
+              for f in files:
+                  if 'gradle-wrapper' in f and f.endswith('.jar'):
+                      shutil.copy(os.path.join(root, f), 'gradle-wrapper.jar')
+                      print('Copied:', f)
+          "
+          fi
+          ls -la
+
+      - name: Build with Gradle
+        run: ./gradlew assembleDebug --no-daemon --stacktrace
+
+      - name: Upload APK
+        uses: actions/upload-artifact@v4
+        with:
+          name: StreamIMDB-APK
+          path: app/build/outputs/apk/debug/app-debug.apk
+          retention-days: 30
